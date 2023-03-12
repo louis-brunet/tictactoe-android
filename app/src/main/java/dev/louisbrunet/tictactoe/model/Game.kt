@@ -38,7 +38,7 @@ class Game(
         }
     }
 
-    fun play(row: Int, column: Int) {
+    fun play(row: Int, column: Int, onWin: (Player) -> Unit) {
         val clicked: Cell = this.rows[row][column]
         if (!clicked.isEmpty() || this.isOver.value) {
             return
@@ -57,6 +57,8 @@ class Game(
             if (isMaxMoveCount) {
                 this.currentPlayer.value = null
                 println("set currentPlayer to ${currentPlayer.value}")
+            } else {
+                onWin(currentPlayer.value!!)
             }
             println("Game Over")
         }

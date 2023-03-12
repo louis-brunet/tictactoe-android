@@ -21,6 +21,7 @@ import dev.louisbrunet.tictactoe.MainLayout
 import dev.louisbrunet.tictactoe.model.Cell
 import dev.louisbrunet.tictactoe.model.Game
 import dev.louisbrunet.tictactoe.model.Player
+import dev.louisbrunet.tictactoe.model.Scores
 
 
 /** GAME SCREEN */
@@ -32,10 +33,23 @@ fun GameScreen() {
     val currentPlayer by game.currentPlayer
     val rows = game.rows
 
+    var scores by rememberSaveable { mutableStateOf(Scores()) }
+    val (scoreX, scoreO) = scores
+
     // define the contents to be displayed in both portrait and
     // landscape mode
     val grid = @Composable {
-        GameGrid(rowStateLists = rows, onCellClick = game::play)
+        GameGrid(
+            rowStateLists = rows,
+            onCellClick = { row: Int, column: Int ->
+                game.play(row, column) {player: Player ->
+                    scores = scores.copy(
+                        scoreX = scores.scoreX + if (player == Player.X) 1 else 0,
+                        scoreO = scores.scoreO + if (player == Player.O) 1 else 0,
+                    )
+                }
+            }
+        )
     }
     val statusText = @Composable {
         StatusText(
@@ -44,7 +58,13 @@ fun GameScreen() {
         )
     }
     val buttonRow = @Composable {
-        ButtonRow(onResetClick = { game = Game() })
+        ButtonRow(
+            onGameReset = { game = Game() },
+            onScoreReset = { scores = Scores() }
+        )
+    }
+    val scoresPanel = @Composable {
+        ScoresPanel(scoreX, scoreO)
     }
 
     // don't need to observe orientation change because
@@ -56,6 +76,7 @@ fun GameScreen() {
                 grid = grid,
                 statusText = statusText,
                 buttonRow = buttonRow,
+                scores = scoresPanel
             )
         }
         else -> {
@@ -63,6 +84,7 @@ fun GameScreen() {
                 grid = grid,
                 statusText = statusText,
                 buttonRow = buttonRow,
+                scores = scoresPanel
             )
         }
     }
@@ -75,13 +97,16 @@ fun GameScreen() {
 fun GameScreenLayoutPortrait(
     grid: @Composable () -> Unit,
     statusText: @Composable () -> Unit,
-    buttonRow: @Composable () -> Unit
+    buttonRow: @Composable () -> Unit,
+    scores: @Composable () -> Unit,
 ) {
     Column {
         Column(modifier = Modifier.weight(1f)) {
             grid()
             statusText()
         }
+
+        scores()
 
         buttonRow()
     }
@@ -95,7 +120,8 @@ fun GameScreenLayoutPortrait(
 fun GameScreenLayoutLandscape(
     grid: @Composable () -> Unit,
     statusText: @Composable () -> Unit,
-    buttonRow: @Composable () -> Unit
+    buttonRow: @Composable () -> Unit,
+    scores: @Composable () -> Unit
 ) {
     Row {
         Column(modifier = Modifier
@@ -108,6 +134,10 @@ fun GameScreenLayoutLandscape(
             Row(modifier = Modifier.weight(1f)) {
                 statusText()
             }
+            Row(modifier = Modifier.weight(1f)) {
+                scores()
+            }
+
             buttonRow()
         }
     }
@@ -125,34 +155,41 @@ fun StatusText(isGameOver: Boolean, currentPlayer: Player?) {
 
     Text(
         text = text,
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier.padding(horizontal = 16.dp, ),
         style = MaterialTheme.typography.h5
     )
 }
 
 /**
- * Buttons for actions : reset the current game,
- * ( TODO ? reset stored scores )
+ * Buttons for actions : reset the current grid, reset player scores
  */
 @Composable
-fun ButtonRow(onResetClick: () -> Unit) {
+fun ButtonRow(
+    onGameReset: () -> Unit,
+    onScoreReset: () -> Unit,
+) {
     Row (
         modifier = Modifier.padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Button(
-            onClick = onResetClick,
+            onClick = onGameReset,
             modifier = Modifier.weight(1f),
         ) {
             Text(
-                text = "Reset this game",
+                text = "Reset this grid",
                 style = MaterialTheme.typography.button,
             )
         }
         Button(
-            onClick = { /*TODO*/ },
+            onClick = onScoreReset,
             modifier = Modifier.weight(1f)
-        ) { /*TODO*/ }
+        ) {
+            Text(
+                text = "Reset scores",
+                style = MaterialTheme.typography.button,
+            )
+        }
     }
 }
 
@@ -200,11 +237,7 @@ fun RowScope.GameCell(
     cell: Cell,
     onCellClick: () -> Unit
 ) {
-    val img: ImageVector? = when (cell.content) {
-        Player.X -> Icons.Outlined.Close
-        Player.O -> Icons.Outlined.Circle
-        else -> null
-    }
+    val img: ImageVector? = getIconImage(cell.content)
 
     Button(
         onClick = onCellClick,
@@ -234,10 +267,61 @@ fun RowScope.GameCell(
     }
 }
 
+@Composable
+fun ScoresPanel(scoreX: Int, scoreO: Int) {
+    Surface(
+        elevation = 1.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Column (modifier = Modifier.padding(8.dp)) {
+            Text(
+                text = "Scores",
+                style = MaterialTheme.typography.h5
+            )
+
+            Row (modifier = Modifier.padding(top = 16.dp)) {
+                Row (modifier = Modifier.weight(1f)) {
+                    Icon(
+                        imageVector = getIconImage(Player.X)!!,
+                        contentDescription = null,
+                    )
+                    Text(
+                        text = "$scoreX",
+                        style = MaterialTheme.typography.body1
+                    )
+                }
+                Row (
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Text(
+                        text = "$scoreO",
+                        style = MaterialTheme.typography.body1
+                    )
+                    Icon(
+                        imageVector = getIconImage(Player.O)!!,
+                        contentDescription = null,
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Preview
 @Composable
 fun GameScreenPreview() {
     MainLayout {
         GameScreen()
+    }
+}
+
+private fun getIconImage(player: Player?): ImageVector? {
+    return when (player) {
+        Player.X -> Icons.Outlined.Close
+        Player.O -> Icons.Outlined.Circle
+        else -> null
     }
 }
