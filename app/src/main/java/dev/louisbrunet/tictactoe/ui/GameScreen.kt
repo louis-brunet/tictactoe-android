@@ -15,7 +15,9 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.louisbrunet.tictactoe.MainLayout
 import dev.louisbrunet.tictactoe.model.Cell
 import dev.louisbrunet.tictactoe.model.Game
 import dev.louisbrunet.tictactoe.model.Player
@@ -24,43 +26,25 @@ import dev.louisbrunet.tictactoe.model.Player
 /** GAME SCREEN */
 @Composable
 fun GameScreen() {
+    // game instance is preserved during recomposition
+    // and configuration changes
     var game by rememberSaveable { mutableStateOf(Game()) }
     val currentPlayer by game.currentPlayer
     val rows = game.rows
-    val onCellClick: (Int, Int) -> Unit = game::play
 
-    val text =
-        if (game.isOver.value) "Game over !${if (currentPlayer != null) " $currentPlayer wins." else " It's a tie."}"
-        else "It is $currentPlayer's turn to play"
-
-
-    val grid = @Composable { GameGrid(rowStateLists = rows, onCellClick = onCellClick)}
+    // define the contents to be displayed in both portrait and
+    // landscape mode
+    val grid = @Composable {
+        GameGrid(rowStateLists = rows, onCellClick = game::play)
+    }
     val statusText = @Composable {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 16.dp),
-            style = MaterialTheme.typography.h5
+        StatusText(
+            isGameOver = game.isOver.value,
+            currentPlayer = currentPlayer
         )
     }
     val buttonRow = @Composable {
-        Row (
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Button(
-                onClick = { game = Game() /*TODO*/ },
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(
-                    text = "Reset this game",
-                    style = MaterialTheme.typography.button,
-                )
-            }
-            Button(
-                onClick = { /*TODO*/ },
-                modifier = Modifier.weight(1f)
-            ) { /*TODO*/ }
-        }
+        ButtonRow(onResetClick = { game = Game() })
     }
 
     // don't need to observe orientation change because
@@ -114,7 +98,9 @@ fun GameScreenLayoutLandscape(
     buttonRow: @Composable () -> Unit
 ) {
     Row {
-        Column(modifier = Modifier.fillMaxHeight().aspectRatio(1f)) {
+        Column(modifier = Modifier
+            .fillMaxHeight()
+            .aspectRatio(1f)) {
             grid()
         }
 
@@ -127,6 +113,52 @@ fun GameScreenLayoutLandscape(
     }
 }
 
+/**
+ * The text to be displayed. Says whose turn it is,
+ * and eventually who won the current game
+ */
+@Composable
+fun StatusText(isGameOver: Boolean, currentPlayer: Player?) {
+    val text =
+        if (isGameOver) "Game over !${if (currentPlayer != null) " $currentPlayer wins." else " It's a tie."}"
+        else "It is $currentPlayer's turn to play"
+
+    Text(
+        text = text,
+        modifier = Modifier.padding(horizontal = 16.dp),
+        style = MaterialTheme.typography.h5
+    )
+}
+
+/**
+ * Buttons for actions : reset the current game,
+ * ( TODO ? reset stored scores )
+ */
+@Composable
+fun ButtonRow(onResetClick: () -> Unit) {
+    Row (
+        modifier = Modifier.padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Button(
+            onClick = onResetClick,
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = "Reset this game",
+                style = MaterialTheme.typography.button,
+            )
+        }
+        Button(
+            onClick = { /*TODO*/ },
+            modifier = Modifier.weight(1f)
+        ) { /*TODO*/ }
+    }
+}
+
+/**
+ * The 3x3 grid of game cells
+ */
 @Composable
 fun GameGrid(
     rowStateLists: List<SnapshotStateList<Cell>>,
@@ -142,6 +174,7 @@ fun GameGrid(
     }
 }
 
+/** A row of 3 game cells in the game grid */
 @Composable
 fun GameRow(
     rowStateList: SnapshotStateList<Cell>,
@@ -161,6 +194,7 @@ fun GameRow(
     }
 }
 
+/** One of the three game cells in a row */
 @Composable
 fun RowScope.GameCell(
     cell: Cell,
@@ -197,5 +231,13 @@ fun RowScope.GameCell(
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+fun GameScreenPreview() {
+    MainLayout {
+        GameScreen()
     }
 }
